@@ -3,7 +3,9 @@ name = "emporio"
 version = "0.1.0"
 description = "Customer service agent for Empório da Música, a fictional musical instruments store."
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.1",
+]
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]
