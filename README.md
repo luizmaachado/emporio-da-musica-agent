@@ -92,4 +92,4 @@ Credit card installments (section 3.1):
 
 ## Architecture
 
-Layers, principles, planned features and the decision log are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Layers, principles and the decision log are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

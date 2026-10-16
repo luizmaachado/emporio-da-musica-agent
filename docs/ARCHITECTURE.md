@@ -27,6 +27,22 @@ Planned layout under `src/emporio/`. Each folder is created by the first feature
 
 Dependencies point down: a layer never imports from a layer above it.
 
+### Domain modules
+
+`domain/` has one module per subject, named after the service that uses it (`domain/pricing.py` ↔ `services/pricing.py`), instead of a single `models.py` that would grow with every feature.
+
+| Module | Contents |
+|---|---|
+| `catalog.py` | `Product`, `ProductStatus` |
+| `pricing.py` | `Promotion`, `PriceBreakdown` |
+| `money.py` | Rounding helper for BRL amounts |
+| `errors.py` | `ErrorCode`, `DomainError` and its subclasses |
+
+New modules are added with the feature that needs them (for example `orders.py`, `customers.py`, `returns.py`, `payment.py`, `store.py`).
+
+- A module may import from another only in one direction; no circular imports. For example, a future `orders.py` may import `catalog.py`, never the other way around.
+- Request and response models that belong to one service (such as the filters and result of the product search) live next to that service, not in `domain/`.
+
 ## Principles
 
 1. **One source of truth.** Each rule lives only in the backend. The agent learns about a rule through the backend functions, not through numbers copied into the prompt.
@@ -38,21 +54,6 @@ Dependencies point down: a layer never imports from a layer above it.
    - Public (anyone, registered or not): catalog, prices, promotions, policies, store information.
    - Identified customer: orders and return eligibility, restricted to the customer's own orders.
 7. **Identity by contact.** A customer is identified by email or phone (normalized). An unknown contact gets a neutral answer that does not reveal whether it exists in the data.
-
-## Planned features
-
-Built one at a time as vertical slices (models, data loading, rule, errors, tests). Contracts (inputs, outputs, error codes) are added here when each feature is designed.
-
-| # | Feature | Depends on | Contract |
-|---|---|---|---|
-| 1 | Product search | — | _to be defined_ |
-| 2 | Product detail and final price | 1 | _to be defined_ |
-| 3 | Store information and opening hours | — | _to be defined_ |
-| 4 | Customer identification | — | _to be defined_ |
-| 5 | Order lookup | 4 | _to be defined_ |
-| 6 | Return and exchange eligibility | 5 | _to be defined_ |
-| 7 | Payment quote | 2 | _to be defined_ |
-| 8 | Policy search (RAG) | — | _to be defined_ |
 
 ## Decision log
 
@@ -68,6 +69,9 @@ Built one at a time as vertical slices (models, data loading, rule, errors, test
 | Backend scope | Query-only | Write operations (e.g. registering a return request) | The challenge asks to apply policies, not to execute actions; can be revisited |
 | Environment | Python 3.13, `uv` (`pyproject.toml` + `uv.lock`), `pytest`, `src/` layout | `venv` + `pip` | The lock file pins every version, which matters because LangChain changes quickly |
 | Time | `datetime.now()` as "today", through an injectable clock | A fixed reference date | Behaves like production; the clock keeps tests deterministic |
+| Several active promotions on one product | The highest discount applies; the lowest promotion id breaks ties | Stacking them | The manual says promotions are not cumulative; the tie-break keeps the result independent of CSV row order |
+| Money | `Decimal`, rounded half up to the cent | `float`, banker's rounding | Floats cannot represent prices exactly; half up is what a customer expects (1.005 becomes 1.01) |
+| Promotion name | The promotion `description` from the data | A separate name field | The data has no separate name column |
 
 ## Only if time allows
 
