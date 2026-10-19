@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Customer service agent for Empório da Música, a fictional musical instruments store."
 requires-python = ">=3.13"
 dependencies = [
+    "langchain>=1.4.6",
+    "langchain-ollama>=1.1.0",
     "pydantic>=2.14.1",
+    "python-dotenv>=1.2.4",
 ]
 
 [build-system]
