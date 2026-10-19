@@ -2,10 +2,13 @@
 import os
 from types import MappingProxyType
 
+from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.chat_models import BaseChatModel
 
 DEFAULT_PROVIDER = "ollama"
 DEFAULT_MODELS = MappingProxyType({"ollama": "qwen3:8b"})
+DEFAULT_EMBEDDING_MODEL = "bge-m3"
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
 _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
 _FALSE_VALUES = frozenset({"0", "false", "no", "off"})
 
@@ -53,9 +56,19 @@ def build_chat_model() -> BaseChatModel:
 
         return ChatOllama(
             model=model,
-            base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434"),
+            base_url=os.environ.get("OLLAMA_BASE_URL", DEFAULT_OLLAMA_URL),
             temperature=0,
             reasoning=_env_bool("LLM_REASONING", default=True),
             num_ctx=_env_int("OLLAMA_NUM_CTX", default=8192),
         )
     raise LLMConfigError(f"Unsupported LLM_PROVIDER: {provider!r}.")
+
+
+def build_embeddings() -> Embeddings:
+    """The embeddings model for the manual search: Ollama, `EMBEDDING_MODEL` (default bge-m3)."""
+    from langchain_ollama import OllamaEmbeddings
+
+    return OllamaEmbeddings(
+        model=os.environ.get("EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL,
+        base_url=os.environ.get("OLLAMA_BASE_URL", DEFAULT_OLLAMA_URL),
+    )

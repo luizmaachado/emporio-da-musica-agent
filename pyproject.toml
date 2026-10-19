@@ -22,6 +22,7 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["integration: needs Ollama and the embeddings model"]
 
 [dependency-groups]
 dev = [
