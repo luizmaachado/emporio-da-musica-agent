@@ -1,6 +1,46 @@
 # Empório da Música — Customer Service Agent
 
-Project definitions agreed so far.
+Customer service agent for Empório da Música, a fictional musical instruments store. The agent answers in Portuguese and queries the store data through tools. Today it handles the product catalog: types, prices, promotions, colors and availability. Orders, policies, payment and store information are being added feature by feature.
+
+## Running the project
+
+Requirements: [uv](https://docs.astral.sh/uv/) and [Ollama](https://ollama.com/) (the default model runs locally). Python 3.13 is installed by `uv` if missing.
+
+```bash
+# 1. Install the dependencies
+uv sync
+
+# 2. Download the local model (about 5 GB) and keep Ollama running
+ollama pull qwen3:8b
+
+# 3. Optional: copy the settings file and adjust it (the defaults already work with Ollama)
+cp .env.example .env
+
+# 4. Chat with the agent (type "sair" to leave)
+uv run emporio
+```
+
+Settings (in `.env` or the environment):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `LLM_PROVIDER` | `ollama` | Model provider. Only Ollama is available for now |
+| `LLM_MODEL` | `qwen3:8b` | Model name |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Where Ollama is running |
+| `LLM_REASONING` | `true` | Reasoning before answering. With `false` the 8B model often skips the tools |
+| `OLLAMA_NUM_CTX` | `8192` | Context size in tokens |
+
+Add `--trace` (`uv run emporio --trace`) to see, under each answer, how long it took, which tools were called with which arguments, and a grounding check that flags prices and names the tools never returned. The check is a testing aid: it does not judge opinions or other claims.
+
+Answers take 10 to 90 seconds with the default model on a laptop; the reasoning is what makes the tool calls reliable.
+
+Tests and checks (no model and no network needed):
+
+```bash
+uv run pytest
+uvx ruff check src tests
+uvx basedpyright src tests
+```
 
 ## Stack
 
@@ -9,7 +49,7 @@ Project definitions agreed so far.
 | Approach | ReAct agent with tools; the policy RAG is one of the tools |
 | Framework | LangChain, using `create_agent` (may migrate to `ToolNode` / a manual graph later) |
 | RAG | Semantic search (embeddings), PDF split by section |
-| Provider / model | Google Gemini (free tier), configurable via environment variables |
+| Provider / model | Ollama (`qwen3:8b`, local) for development and Google Gemini (free tier) to compare, selected by environment variables |
 | Architecture | Miniature layers (data/domain, agent, infrastructure/interface) |
 | Language / tooling | Python 3.13, `uv` for environment and dependencies (`pyproject.toml` + `uv.lock`), `pytest` for tests, `src/` layout |
 | Business rules | In code, not in the LLM |
