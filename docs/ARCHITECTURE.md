@@ -33,9 +33,10 @@ Dependencies point down: a layer never imports from a layer above it.
 
 | Module | Contents |
 |---|---|
-| `catalog.py` | `Product`, `ProductStatus` |
+| `catalog.py` | `Product`, `ProductStatus`, `Availability`, `Category` |
 | `pricing.py` | `Promotion`, `PriceBreakdown` |
 | `money.py` | Rounding helper for BRL amounts |
+| `text.py` | Text normalization (case and accents) for matching what customers type |
 | `errors.py` | `ErrorCode`, `DomainError` and its subclasses |
 
 New modules are added with the feature that needs them (for example `orders.py`, `customers.py`, `returns.py`, `payment.py`, `store.py`).
@@ -71,6 +72,8 @@ New modules are added with the feature that needs them (for example `orders.py`,
 | Time | `datetime.now()` as "today", through an injectable clock | A fixed reference date | Behaves like production; the clock keeps tests deterministic |
 | Several active promotions on one product | The highest discount applies; the lowest promotion id breaks ties | Stacking them | The manual says promotions are not cumulative; the tie-break keeps the result independent of CSV row order |
 | Money | `Decimal`, rounded half up to the cent | `float`, banker's rounding | Floats cannot represent prices exactly; half up is what a customer expects (1.005 becomes 1.01) |
+| Product search | Text search (name, description, category name) plus filters, sorted by final price, no pagination; the agent filters by category id instead of relying on text for plurals ("violão" vs "violões") | Stemming; a paginated result | The catalog has 65 products, so one answer holds them all; a category filter is exact where text matching is fragile |
+| Color names | Only translations are merged (`Preto` becomes `Black`), in the loader; the filter is an exact match | Mapping every color to a base color; editing the CSV | `Red` and `Wine Red` are different colors of an instrument; the CSV stays untouched |
 | Promotion name | The promotion `description` from the data | A separate name field | The data has no separate name column |
 
 ## Only if time allows
