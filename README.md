@@ -10,8 +10,9 @@ Requirements: [uv](https://docs.astral.sh/uv/) and [Ollama](https://ollama.com/)
 # 1. Install the dependencies
 uv sync
 
-# 2. Download the local model (about 5 GB) and keep Ollama running
-ollama pull qwen3:8b
+# 2. Download the local models and keep Ollama running
+ollama pull qwen3:8b   # chat model, about 5 GB
+ollama pull bge-m3     # embeddings for the store manual, about 1.2 GB
 
 # 3. Optional: copy the settings file and adjust it (the defaults already work with Ollama)
 cp .env.example .env
@@ -29,6 +30,7 @@ Settings (in `.env` or the environment):
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Where Ollama is running |
 | `LLM_REASONING` | `true` | Reasoning before answering. With `false` the 8B model often skips the tools |
 | `OLLAMA_NUM_CTX` | `8192` | Context size in tokens |
+| `EMBEDDING_MODEL` | `bge-m3` | Embeddings model for the manual search |
 
 Add `--trace` (`uv run emporio --trace`) to see, under each answer, how long it took, which tools were called with which arguments, and a grounding check that flags prices and names the tools never returned. The check is a testing aid: it does not judge opinions or other claims.
 
@@ -37,7 +39,8 @@ Answers take 10 to 90 seconds with the default model on a laptop; the reasoning 
 Tests and checks (no model and no network needed):
 
 ```bash
-uv run pytest
+uv run pytest                        # the retrieval tests (marked integration) skip without Ollama
+uv run pytest -m integration         # only the tests that need Ollama and bge-m3
 uvx ruff check src tests
 uvx basedpyright src tests
 ```

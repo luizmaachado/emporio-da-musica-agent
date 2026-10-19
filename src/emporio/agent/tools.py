@@ -1,7 +1,8 @@
 """LangChain tools: thin wrappers over the services that return plain, compact data.
 
 Domain errors are returned as `{"error": code, "message": ...}` so the model can react to them
-instead of the run crashing. The rules themselves stay in the services.
+instead of the run crashing. Tools return facts only; how to behave with them is in the prompt.
+The rules themselves stay in the services.
 """
 from decimal import Decimal
 from typing import Annotated
@@ -9,6 +10,7 @@ from typing import Annotated
 from langchain_core.tools import BaseTool, tool
 
 from emporio.domain.errors import DomainError
+from emporio.domain.money import to_money
 from emporio.services.search import (
     ProductFilters,
     ProductSearchService,
@@ -17,12 +19,6 @@ from emporio.services.search import (
     StringType,
 )
 
-_NO_RESULTS_NOTE = (
-    "Nenhum produto encontrado. Não cite outros produtos de memória: refaça a busca com menos "
-    "filtros ou diga ao cliente que não há."
-)
-_RESULTS_NOTE = "Cite apenas produtos desta lista, com o nome exato."
-
 
 def _to_decimal(value: float | None) -> Decimal | None:
     """Prices arrive from the model as JSON numbers; going through `str` avoids float noise.
@@ -30,7 +26,7 @@ def _to_decimal(value: float | None) -> Decimal | None:
     Models often fill unused bounds with 0, which means "no bound"; a real bound of zero
     would not filter anything useful anyway.
     """
-    return None if value is None or value == 0 else Decimal(str(value))
+    return None if value is None or value == 0 else to_money(Decimal(str(value)))
 
 
 def format_brl(amount: Decimal) -> str:
@@ -124,12 +120,11 @@ def build_tools(search: ProductSearchService) -> list[BaseTool]:
             result = search.search(filters)
         except DomainError as error:
             return {"error": error.code.value, "message": str(error)}
-        if not result.items:
-            return {"total": 0, "items": [], "note": _NO_RESULTS_NOTE}
         return {
             "total": len(result.items),
+            # The criteria that were applied, so the answer can say what was searched for.
+            "filters": filters.model_dump(mode="json", exclude_none=True, exclude_defaults=True),
             "items": [_item_summary(item) for item in result.items],
-            "note": _RESULTS_NOTE,
         }
 
     return [list_categories, search_products]

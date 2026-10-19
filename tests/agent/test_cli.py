@@ -5,8 +5,16 @@ import pytest
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 
+from emporio import cli
 from emporio.agent.agent import Agent
-from emporio.cli import ModelUnavailable, format_trace, reply, turn_from
+from emporio.cli import (
+    ModelUnavailable,
+    StartupError,
+    format_trace,
+    reply,
+    start_agent,
+    turn_from,
+)
 
 
 def search_conversation(answer: str | list[str | dict[str, Any]]) -> list[AnyMessage]:
@@ -37,8 +45,8 @@ def test_the_trace_shows_each_alert():
 
     trace = format_trace(turn)
 
-    assert "ALERT: price R$ 9,00 was not returned by any tool" in trace
-    assert "ALERT: 'Fender X' was not returned by any tool" in trace
+    assert "ALERT: price R$ 9,00 was not found in the tool results or the manual" in trace
+    assert "ALERT: 'Fender X' was not found in the tool results or the manual" in trace
 
 
 def test_an_answer_in_content_blocks_is_read_as_plain_text():
@@ -58,3 +66,29 @@ def test_a_model_failure_becomes_model_unavailable():
 
     with pytest.raises(ModelUnavailable, match="ConnectionError"):
         _ = reply(agent, RunnableConfig(), "oi")
+
+
+def test_a_price_from_the_manual_is_grounded_only_when_the_manual_is_passed():
+    messages = search_conversation("A parcela mínima é R$ 80,00.")
+
+    assert turn_from(messages, 1.0).problems != ()
+    assert turn_from(messages, 1.0, "Parcela mínima de R$ 80,00").problems == ()
+
+
+def test_startup_explains_what_to_check_when_ollama_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    def unavailable() -> object:
+        raise ConnectionError("ollama is down")
+
+    monkeypatch.setattr(cli, "build_embeddings", unavailable)
+
+    with pytest.raises(StartupError, match="Ollama"):
+        _ = start_agent()
+
+
+def test_startup_reports_an_invalid_configuration(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("LLM_PROVIDER", "nope")
+
+    with pytest.raises(StartupError, match="Configuração inválida"):
+        _ = start_agent()

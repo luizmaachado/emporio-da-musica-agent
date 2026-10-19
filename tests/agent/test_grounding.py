@@ -30,7 +30,7 @@ def test_an_invented_product_is_reported():
     answer = "Temos o **Fender Precision Bass** por R$ 1.299,90."
 
     assert check_grounding(answer, conversation()) == [
-        "'Fender Precision Bass' was not returned by any tool"
+        "'Fender Precision Bass' was not found in the tool results or the manual"
     ]
 
 
@@ -38,7 +38,7 @@ def test_an_invented_price_is_reported():
     answer = "O **Tagima Memphis AC-39 Nylon Natural** custa R$ 999,00."
 
     assert check_grounding(answer, conversation()) == [
-        "price R$ 999,00 was not returned by any tool"
+        "price R$ 999,00 was not found in the tool results or the manual"
     ]
 
 
@@ -58,7 +58,7 @@ def test_a_price_with_no_tool_call_at_all_is_reported():
     answer = "Custa R$ 500,00."
 
     assert check_grounding(answer, [HumanMessage("preço?")]) == [
-        "price R$ 500,00 was not returned by any tool"
+        "price R$ 500,00 was not found in the tool results or the manual"
     ]
 
 
@@ -81,10 +81,10 @@ def test_every_problem_is_reported_in_order():
     answer = "O **Fender X** custa R$ 5,00 e o **Gibson Y** R$ 6,00."
 
     assert check_grounding(answer, conversation()) == [
-        "price R$ 5,00 was not returned by any tool",
-        "price R$ 6,00 was not returned by any tool",
-        "'Fender X' was not returned by any tool",
-        "'Gibson Y' was not returned by any tool",
+        "price R$ 5,00 was not found in the tool results or the manual",
+        "price R$ 6,00 was not found in the tool results or the manual",
+        "'Fender X' was not found in the tool results or the manual",
+        "'Gibson Y' was not found in the tool results or the manual",
     ]
 
 
@@ -95,3 +95,24 @@ def test_tool_results_in_content_blocks_count_as_evidence():
     ]
 
     assert check_grounding("Temos o **Tagima Memphis AC-39**.", messages) == []
+
+
+def test_a_price_found_in_the_manual_is_grounded():
+    manual = "Parcela mínima de R$ 80,00 de 4x a 6x."
+
+    assert check_grounding("A parcela mínima é R$ 80,00.", [HumanMessage("6x?")], manual) == []
+    assert check_grounding("A parcela mínima é R$ 80,00.", [HumanMessage("6x?")]) != []
+
+
+def test_an_amount_the_customer_wrote_may_be_repeated_back():
+    messages = [HumanMessage("posso parcelar 400 reais em 6x?")]
+
+    assert check_grounding("Uma compra de R$ 400,00 em 6x...", messages) == []
+    assert check_grounding("Uma compra de R$ 500,00 em 6x...", messages) != []
+
+
+def test_a_number_that_is_not_an_amount_does_not_ground_a_price():
+    messages = [HumanMessage("posso parcelar em 6x ou 12 meses?")]
+
+    assert check_grounding("Cada parcela seria de R$ 6,00.", messages) != []
+    assert check_grounding("Cada parcela seria de R$ 12,00.", messages) != []

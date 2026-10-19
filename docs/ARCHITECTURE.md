@@ -6,7 +6,8 @@ Architectural decisions for the Empório da Música customer service agent. Busi
 
 ```
 Customer ──▶ Agent ──▶ Services (backend rules) ──▶ Data (CSV) 
-                                   └──────────────▶ Policies (PDF, semantic search)
+
+Customer ──▶ Agent ──▶ Manual retrieval (PDF, semantic search)
 ```
 
 - The **backend** (services) is the source of truth and enforces every business rule. The agent cannot bypass it.
@@ -20,9 +21,9 @@ Planned layout under `src/emporio/`. Each folder is created by the first feature
 | Layer | Responsibility | May depend on |
 |---|---|---|
 | `domain/` | Pydantic models, enums (e.g. product availability), domain errors with stable reason codes | Standard library and Pydantic |
-| `data/` | Loads the CSVs and builds the domain models, which validate and convert each row; converts `specs`, parses dates, keeps only active promotions | `domain` |
+| `data/` | Loads the CSVs and reads the manual (PDF) into sections, and builds the domain models, which validate and convert each row; converts `specs`, parses dates, keeps only active promotions | `domain` |
 | `services/` | Business rules, one module per feature | `domain`, `data` |
-| `agent/` | `tools.py` (thin wrappers over the services), `prompt.py`, `llm.py` (model from environment variables), `agent.py` (composition root: loads the data, builds the services and `create_agent`), `trace.py` and `grounding.py` (testing aids, see the decision log), `messages.py` (reads message text) | `services`, `data`, `domain` |
+| `agent/` | `tools.py` (thin wrappers over the services), `prompt.py`, `llm.py` (model from environment variables), `agent.py` (composition root: loads the data, builds the services and `create_agent`), `policies.py` (retrieval over the store manual), `trace.py` and `grounding.py` (testing aids, see the decision log), `messages.py` (reads message text) | `services`, `data`, `domain` |
 | `cli.py` | Chat loop used to talk to the agent (`uv run emporio`); `--trace` shows time, tool calls and the grounding check under each answer | `agent` |
 
 Dependencies point down: a layer never imports from a layer above it.
@@ -34,6 +35,7 @@ Dependencies point down: a layer never imports from a layer above it.
 | Module | Contents |
 |---|---|
 | `catalog.py` | `Product`, `ProductStatus`, `Availability`, `Category` |
+| `policies.py` | `PolicySection`, one numbered section of the store manual |
 | `pricing.py` | `Promotion`, `PriceBreakdown` |
 | `money.py` | Rounding helper for BRL amounts |
 | `text.py` | Text normalization (case and accents) for matching what customers type |
@@ -60,14 +62,17 @@ New modules are added with the feature that needs them (for example `orders.py`,
 
 | Decision | Choice | Alternatives considered | Why |
 |---|---|---|---|
-| Agent approach | ReAct with tool calling; the policy RAG is one of the tools | Context stuffing, RAG only, SQL agent | The task is routing between exact data (prices, stock, orders) and free text (policies) |
+| Agent approach | ReAct with tool calling for exact data; the store manual is retrieved automatically on every turn | Context stuffing, RAG only, SQL agent | The task is routing between exact data (prices, stock, orders) and free text (policies) |
 | Agent framework | LangChain `create_agent` | `ToolNode` with LangGraph, manual LangGraph graph | Least code for a prototype; migration to `ToolNode` or a manual graph stays possible if more control is needed |
 | Policy retrieval | Semantic search (embeddings), PDF split by numbered section | BM25 keyword search | Customers write informally ("I want my money back"); each manual section is a complete unit of meaning |
 | LLM provider | Ollama with `qwen3:8b` for development, Google Gemini free tier to compare; both selected by environment variables (`LLM_PROVIDER`, `LLM_MODEL`) | Groq, Claude Haiku 5.5 (paid API) | No cost; free-tier limits change often, so provider and model are configurable. Local models run offline but are weaker at tool calling |
 | Ollama settings | Reasoning on (`LLM_REASONING`) and a context of 8192 tokens (`OLLAMA_NUM_CTX`) | Reasoning off | With reasoning off the 8B model often skipped the tools and invented answers; the price is 10 to 90 s per answer |
-| Tool results | Compact data with money already formatted ("R$ 1.299,90"), domain errors returned as `{error, message}`, and a short note telling the model to cite only listed products | Raw service models; raising exceptions | The model should not format money or crash on a refused request; the notes reduced invented products. Formatting lives in the agent layer, services still return `Decimal` |
+| Tool results | Compact data with money already formatted ("R$ 1.299,90"), domain errors returned as `{error, message}`, and the `filters` that were applied; no instructions inside the results | Raw service models; raising exceptions; notes in the results telling the model what to do | The model should not format money or crash on a refused request. Instruction notes inside results were tried first and removed: behavior belongs in the prompt, and the empty-result note led the agent to switch category silently. Formatting lives in the agent layer, services still return `Decimal` |
 | Search flow | A model or brand goes in `query` only; an instrument type goes through `list_categories` and then `category_id` | Text search for everything | Text search misses plurals ("violão" vs "Violões"); the prompt carries the routing and each tool parameter says when to use it |
-| Grounding check | After each answer, `grounding.py` checks that every price and every **bold** name appears in a tool result of the conversation; `--trace` prints the alerts | An LLM judge; no check | It is cheap, deterministic and needs no model. It caught an agent answering about a product without searching. It is a manual-testing aid, not a guarantee: it does not check opinions, colors, stock or percentages, a price bound sent to a tool counts as evidence, and short bold fragments match by substring |
+| Store rules and information | The manual (PDF) is the source for address, contacts, hours, payment, returns, shipping, warranty and promotions: `data/policies.py` splits it into numbered sections (`pdfplumber`, regex on the numbered titles, page headers and footers removed) and `agent/policies.py` embeds them with `bge-m3` on Ollama. Sections 7.2 (service flow, already in the prompt) and 10 (closing notes) are left out, by number | Structured `store.json` or code constants; copying the rules into the prompt | Updating the PDF updates the agent, as long as the numbering of the left-out sections holds: a test fails if 7.2 and 10 stop having the expected titles. Trade-off: opening hours, holidays and special dates are prose, so the agent answers with the opening hours and open days and does not say whether the store is open right now (it has no clock); the manual has two phone numbers, which the prompt tells apart |
+| Manual retrieval | Automatic on every turn, not a tool, and with no similarity cutoff: the 3 closest sections go into that turn's system prompt | A `search_policies` tool the model decides to call; a cutoff on the similarity score | The 8B model skips tools too often. A cutoff was tried and dropped: on new questions it blocked ones it should have answered (for example "what is your CNPJ?"), while the extra sections never made the product answers worse. The manual is small, so 3 extra sections per turn cost little. `tests/agent/test_policy_retrieval_eval.py` checks 38 questions (right section in the top 3 for 37) |
+| Manual in answers | The model speaks as the store and never mentions the manual or section numbers | Citing the section | Customers do not have the internal manual |
+| Grounding check | After each answer, `grounding.py` checks that every price and every **bold** name appears in a tool result of the conversation or in the manual (an amount the customer wrote also counts); `--trace` prints the alerts | An LLM judge; no check | It is cheap, deterministic and needs no model. It caught an agent answering about a product without searching. It is a manual-testing aid, not a guarantee: it does not check opinions, colors, stock or percentages, a price the model computes itself is reported, a price bound sent to a tool counts as evidence, and short bold fragments match by substring |
 | Conversation memory | `InMemorySaver`, one `thread_id` per CLI run | A database | Enough for a prototype; the history is lost when the program exits |
 | Identity in future tools | The customer identity comes from the session, never from an argument the model fills | A `contact` parameter chosen by the model | Otherwise the model could be talked into reading another customer's orders |
 | Where rules live | Backend code | LLM prompt | Rules with numbers (prices, deadlines) must be deterministic and testable |

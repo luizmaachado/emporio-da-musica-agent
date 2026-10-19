@@ -11,9 +11,10 @@ from langchain_core.runnables import RunnableConfig
 
 from emporio.agent.agent import Agent, build_agent
 from emporio.agent.grounding import check_grounding
-from emporio.agent.llm import LLMConfigError, build_chat_model
+from emporio.agent.llm import LLMConfigError, build_chat_model, build_embeddings
 from emporio.agent.messages import content_text
 from emporio.agent.trace import ToolCall, tool_calls_of_last_turn
+from emporio.data.policies import load_policy_sections
 
 EXIT_WORDS = frozenset({"sair", "exit", "quit"})
 
@@ -32,8 +33,10 @@ class ModelUnavailable(Exception):
     """The model could not answer (Ollama stopped, model missing, network error...)."""
 
 
-def reply(agent: Agent, config: RunnableConfig, text: str) -> Turn:
+def reply(agent: Agent, config: RunnableConfig, text: str, manual: str = "") -> Turn:
     """Send one customer message and return the agent's answer with its trace.
+
+    `manual` is the text of the store manual, accepted as evidence by the grounding check.
 
     Raises:
         ModelUnavailable: when the call to the model fails. Errors in building the trace are
@@ -44,17 +47,17 @@ def reply(agent: Agent, config: RunnableConfig, text: str) -> Turn:
         result = agent.invoke({"messages": [{"role": "user", "content": text}]}, config)
     except Exception as error:
         raise ModelUnavailable(type(error).__name__) from error
-    return turn_from(result["messages"], time.monotonic() - started)
+    return turn_from(result["messages"], time.monotonic() - started, manual)
 
 
-def turn_from(messages: Sequence[AnyMessage], seconds: float) -> Turn:
+def turn_from(messages: Sequence[AnyMessage], seconds: float, manual: str = "") -> Turn:
     """Build the turn from the conversation so far; the last message is the answer."""
     answer = content_text(messages[-1].content)
     return Turn(
         answer,
         seconds,
         tuple(tool_calls_of_last_turn(messages)),
-        tuple(check_grounding(answer, messages)),
+        tuple(check_grounding(answer, messages, manual)),
     )
 
 
@@ -69,6 +72,29 @@ def format_trace(turn: Turn) -> str:
     return "\n".join(lines)
 
 
+class StartupError(Exception):
+    """The agent could not start; the message tells the user what to check."""
+
+
+def start_agent() -> tuple[Agent, str]:
+    """The agent and the text of the manual it knows (used by the grounding check).
+
+    Raises:
+        StartupError: when the configuration is invalid or Ollama or its models are unavailable.
+    """
+    try:
+        sections = load_policy_sections()
+        agent = build_agent(build_chat_model(), build_embeddings(), sections)
+    except LLMConfigError as error:
+        raise StartupError(f"Configuração inválida: {error}") from error
+    except Exception as error:
+        raise StartupError(
+            f"Não consegui iniciar o agente ({type(error).__name__}). O Ollama está rodando e "
+            "os modelos foram baixados? Veja o README (ollama pull qwen3:8b e bge-m3)."
+        ) from error
+    return agent, "\n".join(section.text for section in sections)
+
+
 def main() -> None:
     """Chat until the customer types an exit word. A new run starts a new conversation."""
     parser = argparse.ArgumentParser(description="Chat with the Empório da Música agent.")
@@ -78,9 +104,9 @@ def main() -> None:
     trace = bool(parser.parse_args().trace)
     _ = load_dotenv()
     try:
-        agent = build_agent(build_chat_model())
-    except LLMConfigError as error:
-        print(f"Configuração inválida: {error}")
+        agent, manual = start_agent()
+    except StartupError as error:
+        print(error)
         raise SystemExit(1) from None
     config = RunnableConfig(configurable={"thread_id": str(uuid.uuid4())})
     print("Empório da Música — digite 'sair' para encerrar.\n")
@@ -95,7 +121,7 @@ def main() -> None:
         if not text:
             continue
         try:
-            turn = reply(agent, config, text)
+            turn = reply(agent, config, text, manual)
         except ModelUnavailable as error:
             print(f"\nNão consegui falar com o modelo agora ({error}). Tente de novo.\n")
             continue
