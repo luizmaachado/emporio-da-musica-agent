@@ -1,8 +1,9 @@
 """Builders for synthetic domain objects, so rule tests do not depend on the store CSVs."""
+import json
 from datetime import date
 from decimal import Decimal
 
-from emporio.domain.catalog import Product
+from emporio.domain.catalog import Category, Product
 from emporio.domain.pricing import Promotion
 
 
@@ -22,9 +23,34 @@ def product_row(**overrides: object) -> dict[str, object]:
     return row | overrides
 
 
-def make_product(product_id: int = 1, price: str = "100.00") -> Product:
+def make_product(
+    product_id: int = 1,
+    price: str = "100.00",
+    *,
+    name: str = "Test guitar",
+    category_id: int = 1,
+    description: str = "Synthetic product for tests",
+    status: str = "active",
+    stock: int = 1,
+    specs: dict[str, str] | None = None,
+) -> Product:
     """Built with `model_validate`, the same path the loader uses for CSV rows."""
-    return Product.model_validate(product_row(product_id=product_id, price_brl=price))
+    return Product.model_validate(
+        product_row(
+            product_id=product_id,
+            price_brl=price,
+            name=name,
+            category_id=category_id,
+            description=description,
+            status=status,
+            stock_quantity=stock,
+            specs=json.dumps(specs or {}),
+        )
+    )
+
+
+def make_category(category_id: int = 1, name: str = "Test category") -> Category:
+    return Category(category_id=category_id, name=name, description=f"{name} for tests")
 
 
 def make_promotion(

@@ -6,13 +6,21 @@ from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, Json
+from pydantic import BaseModel, ConfigDict, Field, Json, computed_field
 
 
 class ProductStatus(StrEnum):
     ACTIVE = "active"
     DISCONTINUED = "discontinued"
     COMING_SOON = "coming_soon"
+
+
+class Availability(StrEnum):
+    """What a customer can do with a product right now."""
+
+    AVAILABLE = "available"
+    OUT_OF_STOCK = "out_of_stock"
+    UNAVAILABLE = "unavailable"
 
 
 class Category(BaseModel):
@@ -37,3 +45,14 @@ class Product(BaseModel):
     # material for guitars but a count for basses.
     specs: Json[dict[str, str]]
     created_at: date
+
+    @computed_field
+    @property
+    def availability(self) -> Availability:
+        """Active with stock is available; active without stock is out of stock.
+
+        Any other status is unavailable: discontinued and upcoming products are never offered.
+        """
+        if self.status is not ProductStatus.ACTIVE:
+            return Availability.UNAVAILABLE
+        return Availability.AVAILABLE if self.stock > 0 else Availability.OUT_OF_STOCK
