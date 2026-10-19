@@ -91,14 +91,20 @@ def test_search_products_reports_an_invalid_price_range(tools: dict[str, BaseToo
     assert result["error"] == "INVALID_PRICE_RANGE"
 
 
-def test_search_without_results_tells_the_model_not_to_invent_products(
+def test_search_without_results_reports_the_criteria_that_were_applied(
     tools: dict[str, BaseTool],
 ):
-    result = tools["search_products"].invoke({"query": "trombone"})
+    result = tools["search_products"].invoke({"category_id": 1, "max_price": 100})
 
     assert result["total"] == 0
     assert result["items"] == []
-    assert result["note"]
+    assert result["filters"] == {"category_id": 1, "max_price": "100.00"}
+
+
+def test_the_results_carry_facts_only_no_instructions(tools: dict[str, BaseTool]):
+    result = tools["search_products"].invoke({"query": "yamaha"})
+
+    assert set(result) == {"total", "filters", "items"}
 
 
 def test_a_zero_price_bound_is_ignored(tools: dict[str, BaseTool]):
