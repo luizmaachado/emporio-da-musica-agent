@@ -22,8 +22,8 @@ Planned layout under `src/emporio/`. Each folder is created by the first feature
 | `domain/` | Pydantic models, enums (e.g. product availability), domain errors with stable reason codes | Standard library and Pydantic |
 | `data/` | Loads the CSVs and builds the domain models, which validate and convert each row; converts `specs`, parses dates, keeps only active promotions | `domain` |
 | `services/` | Business rules, one module per feature | `domain`, `data` |
-| agent (later) | Tools over the services, prompt, `create_agent` | `services` |
-| interface (later) | Entry point used to talk to the agent | agent |
+| `agent/` | `tools.py` (thin wrappers over the services), `prompt.py`, `llm.py` (model from environment variables), `agent.py` (composition root: loads the data, builds the services and `create_agent`), `trace.py` and `grounding.py` (testing aids, see the decision log), `messages.py` (reads message text) | `services`, `data`, `domain` |
+| `cli.py` | Chat loop used to talk to the agent (`uv run emporio`); `--trace` shows time, tool calls and the grounding check under each answer | `agent` |
 
 Dependencies point down: a layer never imports from a layer above it.
 
@@ -63,7 +63,13 @@ New modules are added with the feature that needs them (for example `orders.py`,
 | Agent approach | ReAct with tool calling; the policy RAG is one of the tools | Context stuffing, RAG only, SQL agent | The task is routing between exact data (prices, stock, orders) and free text (policies) |
 | Agent framework | LangChain `create_agent` | `ToolNode` with LangGraph, manual LangGraph graph | Least code for a prototype; migration to `ToolNode` or a manual graph stays possible if more control is needed |
 | Policy retrieval | Semantic search (embeddings), PDF split by numbered section | BM25 keyword search | Customers write informally ("I want my money back"); each manual section is a complete unit of meaning |
-| LLM provider | Google Gemini free tier, configured by environment variables | Groq, Claude Haiku 5.5 (paid API), local models | No cost; free-tier limits change often, so provider and model are configurable |
+| LLM provider | Ollama with `qwen3:8b` for development, Google Gemini free tier to compare; both selected by environment variables (`LLM_PROVIDER`, `LLM_MODEL`) | Groq, Claude Haiku 5.5 (paid API) | No cost; free-tier limits change often, so provider and model are configurable. Local models run offline but are weaker at tool calling |
+| Ollama settings | Reasoning on (`LLM_REASONING`) and a context of 8192 tokens (`OLLAMA_NUM_CTX`) | Reasoning off | With reasoning off the 8B model often skipped the tools and invented answers; the price is 10 to 90 s per answer |
+| Tool results | Compact data with money already formatted ("R$ 1.299,90"), domain errors returned as `{error, message}`, and a short note telling the model to cite only listed products | Raw service models; raising exceptions | The model should not format money or crash on a refused request; the notes reduced invented products. Formatting lives in the agent layer, services still return `Decimal` |
+| Search flow | A model or brand goes in `query` only; an instrument type goes through `list_categories` and then `category_id` | Text search for everything | Text search misses plurals ("violão" vs "Violões"); the prompt carries the routing and each tool parameter says when to use it |
+| Grounding check | After each answer, `grounding.py` checks that every price and every **bold** name appears in a tool result of the conversation; `--trace` prints the alerts | An LLM judge; no check | It is cheap, deterministic and needs no model. It caught an agent answering about a product without searching. It is a manual-testing aid, not a guarantee: it does not check opinions, colors, stock or percentages, a price bound sent to a tool counts as evidence, and short bold fragments match by substring |
+| Conversation memory | `InMemorySaver`, one `thread_id` per CLI run | A database | Enough for a prototype; the history is lost when the program exits |
+| Identity in future tools | The customer identity comes from the session, never from an argument the model fills | A `contact` parameter chosen by the model | Otherwise the model could be talked into reading another customer's orders |
 | Where rules live | Backend code | LLM prompt | Rules with numbers (prices, deadlines) must be deterministic and testable |
 | Domain models | Pydantic models, used for validation, domain representation and tool schemas | Standard library `dataclass`, `pandas`; Pydantic only at the boundaries | The CSVs arrive as text, so validation and type conversion are needed anyway; one model type avoids a raw model plus a domain model and the conversion between them. Pydantic is already required by LangChain and is the de facto standard for data validation in Python. Trade-off: the domain depends on an external library instead of the standard library alone |
 | Error handling | Domain exceptions with a stable reason code | Result objects | Idiomatic Python; keeps functions simple; a higher layer can convert exceptions into structured replies |
