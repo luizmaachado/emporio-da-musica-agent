@@ -15,6 +15,14 @@ class ProductStatus(StrEnum):
     COMING_SOON = "coming_soon"
 
 
+class Category(BaseModel):
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+
+    id: int = Field(alias="category_id")
+    name: str
+    description: str
+
+
 class Product(BaseModel):
     model_config = ConfigDict(frozen=True, populate_by_name=True)
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from emporio.data.loader import load_active_promotions, load_products
+from emporio.data.loader import load_active_promotions, load_categories, load_products
 
 PRODUCT_HEADER = (
     "product_id,price_brl,name,category_id,description,stock_quantity,status,specs,created_at"
@@ -74,3 +74,33 @@ def test_invalid_row_raises_validation_error(tmp_path: Path):
 def test_missing_file_raises_file_not_found(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
         _ = load_products(tmp_path)
+
+
+def test_real_categories_include_those_without_products():
+    category_ids = {category.id for category in load_categories()}
+    product_category_ids = {product.category_id for product in load_products()}
+
+    # Every product category exists, and at least one category has no products.
+    assert product_category_ids < category_ids
+
+
+def test_portuguese_color_name_is_unified_with_the_english_one():
+    colors = {product.specs.get("color") for product in load_products()}
+
+    assert "Preto" not in colors
+    assert "Black" in colors
+
+
+def test_distinct_colors_are_not_merged(tmp_path: Path):
+    write_table(
+        tmp_path,
+        "products",
+        PRODUCT_HEADER,
+        '1,100.00,A,1,d,1,active,"{""color"":""Preto""}",2025-01-01',
+        '2,100.00,B,1,d,1,active,"{""color"":""Wine Red""}",2025-01-01',
+        '3,100.00,C,1,d,1,active,"{""color"":""Red""}",2025-01-01',
+    )
+
+    colors = [product.specs["color"] for product in load_products(tmp_path)]
+
+    assert colors == ["Black", "Wine Red", "Red"]
