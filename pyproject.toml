@@ -6,6 +6,9 @@ requires-python = ">=3.13"
 dependencies = [
     "langchain>=1.4.6",
     "langchain-ollama>=1.1.0",
+    # Not imported by our code: LangChain's InMemoryVectorStore needs it for the similarity search.
+    "numpy>=2.5.4",
+    "pdfplumber>=0.11.10",
     "pydantic>=2.14.1",
     "python-dotenv>=1.2.4",
 ]
