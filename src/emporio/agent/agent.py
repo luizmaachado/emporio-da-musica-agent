@@ -21,6 +21,7 @@ from emporio.agent.tools import build_tools
 from emporio.data.loader import load_active_promotions, load_categories, load_products
 from emporio.data.policies import load_policy_sections
 from emporio.domain.policies import PolicySection
+from emporio.services.payment import PaymentService
 from emporio.services.search import ProductSearchService
 
 type Agent = CompiledStateGraph[AgentState[Any], None, Any, Any]
@@ -41,7 +42,9 @@ def build_agent(
     in to share a single reading of the PDF. The conversation history is kept in memory, per
     `thread_id`.
     """
-    search = ProductSearchService(load_products(), load_categories(), load_active_promotions())
+    products, promotions = load_products(), load_active_promotions()
+    search = ProductSearchService(products, load_categories(), promotions)
+    payment = PaymentService(products, promotions)
     policies = PolicyRetriever(
         load_policy_sections() if sections is None else sections,
         embeddings,
@@ -55,7 +58,7 @@ def build_agent(
 
     return create_agent(
         model,
-        build_tools(search),
+        build_tools(search, payment),
         middleware=[system_prompt],
         checkpointer=InMemorySaver(),
     )
