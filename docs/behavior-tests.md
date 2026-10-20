@@ -36,7 +36,7 @@ The store has categories with no products (woodwinds, brass, orchestral strings)
 
 | Question | Result |
 |---|---|
-| "vocês vendem saxofone?" | First round: said there were flutes, clarinets and oboes in stock (the category description read as stock). Final prompt: no models available, with a contradictory phrasing (`exemplos/05-categoria-sem-produtos.md`) |
+| "vocês vendem saxofone?" | First round: said there were flutes, clarinets and oboes in stock (the category description read as stock). Final prompt: no models available, with a contradictory phrasing (`examples/05-category-without-products.md`) |
 | "quanto custa um trompete?" | First round: "a categoria está temporariamente sem estoque" (the phrase the prompt asked not to use: naming a forbidden phrase repeated it). Final prompt: searched, found 0 products and said so |
 | "queria um violino até 2000 reais" | Said there are none and suggested ukuleles, without searching for them |
 

@@ -13,7 +13,7 @@ A text agent for the customer service of Empório da Música, a fictional musica
 
 **What it does not do:** look up orders, check whether a specific order can be returned, or know whether the store is open right now. For those it explains the rule or the opening hours and sends the customer to the store team. See the [limitations](#known-limitations) and [what I would do with more time](#with-more-time).
 
-Real conversations are in [`exemplos/`](exemplos/README.md).
+Real conversations are in [`examples/`](examples/README.md).
 
 ## Running the project
 
@@ -93,7 +93,7 @@ src/emporio/
 tests/        Mirrors src/ (domain, data, services, agent)
 data/         The store's CSV files and the manual, never modified
 docs/         ARCHITECTURE.md (layers, principles, decision log) and behavior-tests.md
-exemplos/     Five real conversations
+examples/     Five real conversations
 ```
 
 ## Technical decisions
@@ -119,7 +119,7 @@ Each decision has the alternatives considered in [docs/ARCHITECTURE.md](docs/ARC
 
 - **Backend:** unit tests with synthetic data and with the real CSVs (`uv run pytest`, 180 tests).
 - **Manual search:** 38 questions with the section that should answer them; the right section is in the top 3 for 37 and first for most (`tests/agent/test_policy_retrieval_eval.py`, needs Ollama).
-- **The agent itself:** by hand, with `--trace`, comparing each answer with the data. Language models are not deterministic, so there is no automated test of the final text. The examples in `exemplos/` include the mistakes that were seen, and [docs/behavior-tests.md](docs/behavior-tests.md) records questions outside the store's scope and attempts to make the agent reveal its instructions.
+- **The agent itself:** by hand, with `--trace`, comparing each answer with the data. Language models are not deterministic, so there is no automated test of the final text. The examples in `examples/` include the mistakes that were seen, and [docs/behavior-tests.md](docs/behavior-tests.md) records questions outside the store's scope and attempts to make the agent reveal its instructions.
 
 ## Data handling
 
@@ -199,7 +199,7 @@ The manual and the data contradict themselves in a few places. These are the cho
 
 ## Known limitations
 
-- **Model.** Accuracy and speed are bounded by the local 8B model (15 s to 113 s per answer; invented details, instructions that are sometimes ignored: see [`exemplos/`](exemplos/README.md) and [docs/behavior-tests.md](docs/behavior-tests.md)). The model is a setting. What must not depend on it, prices, installments and availability, is computed in code.
+- **Model.** Accuracy and speed are bounded by the local 8B model (15 s to 113 s per answer; invented details, instructions that are sometimes ignored: see [`examples/`](examples/README.md) and [docs/behavior-tests.md](docs/behavior-tests.md)). The model is a setting. What must not depend on it, prices, installments and availability, is computed in code.
 - **Orders and returns are not built.** No customer identification, order status or return eligibility check; the agent explains the rule and sends the customer to the store contacts. For the same reason it greets by name only when the customer gives one.
 - **No clock.** It cannot say whether the store is open now.
 - **Coverage of the checks.** Text search misses products that never name their instrument type (the Martin D-28E never says "violão"), which the category filter covers for instrument types. Manual retrieval was checked on 38 questions I wrote and has no reranker. The grounding check is a testing aid that covers prices and bold names only.
@@ -223,7 +223,7 @@ I built this project with **Claude Code**. How I used it:
 - **Tests with the code.** Business rules were written with their tests (boundaries of the installment rules, the manual parser, retrieval).
 - **Three read-only review agents** defined in [`.claude/agents/`](.claude/agents): `architecture-reviewer` (checks the code against the documented architecture and rules), `code-reviewer` (correctness, readability and test quality) and `commit-planner` (proposes how to split the changes into commits). They ran before most merges, and I decided which findings to apply.
 - **Research and measurement, not guesses.** When a choice was in doubt we measured it: PDF readers compared on the real manual, retrieval checked with questions that were not used to tune it, and the retrieval cutoff dropped after a side-by-side run showed it blocked valid questions.
-- **Manual testing of the agent** with `--trace`, reading each answer against the data. The conversations in `exemplos/` are copied from the terminal without editing.
+- **Manual testing of the agent** with `--trace`, reading each answer against the data. The conversations in `examples/` are copied from the terminal without editing.
 
 ## Architecture
 
