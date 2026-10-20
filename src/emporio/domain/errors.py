@@ -6,6 +6,7 @@ class ErrorCode(StrEnum):
     PRODUCT_NOT_FOUND = "PRODUCT_NOT_FOUND"
     UNKNOWN_CATEGORY = "UNKNOWN_CATEGORY"
     INVALID_PRICE_RANGE = "INVALID_PRICE_RANGE"
+    INVALID_INSTALLMENTS = "INVALID_INSTALLMENTS"
 
 
 class DomainError(Exception):
@@ -39,3 +40,14 @@ class InvalidPriceRange(DomainError):
         super().__init__(
             ErrorCode.INVALID_PRICE_RANGE, "The minimum price cannot exceed the maximum price."
         )
+
+
+class InvalidInstallments(DomainError):
+    """The number of installments is outside what the store offers."""
+
+    def __init__(self, installments: int, maximum: int) -> None:
+        super().__init__(
+            ErrorCode.INVALID_INSTALLMENTS,
+            f"{installments} installments requested; the store offers 1 to {maximum}.",
+        )
+        self.installments = installments
