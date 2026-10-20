@@ -1,0 +1,30 @@
+[project]
+name = "emporio"
+version = "0.1.0"
+description = "Customer service agent for Empório da Música, a fictional musical instruments store."
+requires-python = ">=3.13"
+dependencies = [
+    "langchain>=1.4.6",
+    "langchain-ollama>=1.1.0",
+    # Not imported by our code: LangChain's InMemoryVectorStore needs it for the similarity search.
+    "numpy>=2.5.4",
+    "pdfplumber>=0.11.10",
+    "pydantic>=2.14.1",
+    "python-dotenv>=1.2.4",
+]
+
+[project.scripts]
+emporio = "emporio.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: needs Ollama and the embeddings model"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
