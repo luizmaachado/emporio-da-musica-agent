@@ -110,7 +110,7 @@ Rules come from the store manual (sections 4 and 8). The backend is the source o
 
 ## Payment quote
 
-A backend function computes the quote for a purchase.
+`PaymentService.quote` computes the quote for a product, and the agent calls it through the `quote_payment` tool. The quote lists every option; with a number of installments it also singles out that credit card option.
 
 | Method | Rule |
 |---|---|
@@ -125,6 +125,8 @@ Credit card installments (section 3.1):
 | Up to 3x | No minimum, but the purchase total must be at least R$ 50.00 to be split |
 | 4x to 6x | R$ 80.00 |
 | 7x to 12x | R$ 100.00 |
+
+Rounding: an installment is the total divided by the number of installments, rounded half up to the cent, and that rounded value is the one compared with the minimum. Different payment methods can be combined only on purchases above R$ 2,000.00.
 
 ### Known gap and chosen solution
 
