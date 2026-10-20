@@ -11,6 +11,8 @@ from langchain_core.tools import BaseTool, tool
 
 from emporio.domain.errors import DomainError
 from emporio.domain.money import to_money
+from emporio.domain.payment import PaymentMethod, PaymentOption, PaymentQuote
+from emporio.services.payment import PaymentService
 from emporio.services.search import (
     ProductFilters,
     ProductSearchService,
@@ -59,8 +61,50 @@ def _item_summary(item: SearchItem) -> dict[str, object]:
     }
 
 
-def build_tools(search: ProductSearchService) -> list[BaseTool]:
-    """The catalog tools, bound to a search service. Their names are referenced by the prompt."""
+def _credit_summary(option: PaymentOption) -> dict[str, object]:
+    return {
+        "installments": option.installments,
+        "installment_value": format_brl(option.installment_value),
+        "total": format_brl(option.total),
+        "allowed": option.allowed,
+        "refusal": option.refusal.value if option.refusal else None,
+        "minimum_installment": (
+            format_brl(option.minimum_installment) if option.minimum_installment else None
+        ),
+    }
+
+
+def _quote_summary(quote: PaymentQuote) -> dict[str, object]:
+    """What the model sees of a quote: money formatted, credit card options that are allowed."""
+    by_method = {o.method: o for o in quote.options if o.installments == 1}
+    pix = by_method[PaymentMethod.PIX]
+    credit = [
+        o for o in quote.options if o.method is PaymentMethod.CREDIT_CARD and o.allowed
+    ]
+    summary: dict[str, object] = {
+        "product": quote.product_name,
+        "availability": quote.availability.value,
+        "list_price": format_brl(quote.list_price),
+        "final_price": format_brl(quote.final_price),
+        "has_active_promotion": quote.has_active_promotion,
+        "pix": {
+            "total": format_brl(pix.total),
+            "discount": format_brl(pix.discount_amount),
+            "discount_applied": pix.discount_amount > 0,
+        },
+        "debit_card": {"total": format_brl(by_method[PaymentMethod.DEBIT_CARD].total)},
+        "bank_slip": {"total": format_brl(by_method[PaymentMethod.BANK_SLIP].total)},
+        "credit_card_allowed": [_credit_summary(o) for o in credit],
+        "max_installments": max(o.installments for o in credit),
+        "can_combine_methods": quote.can_combine_methods,
+    }
+    if quote.requested is not None:
+        summary["requested_installments"] = _credit_summary(quote.requested)
+    return summary
+
+
+def build_tools(search: ProductSearchService, payment: PaymentService) -> list[BaseTool]:
+    """The tools, bound to the services. Their names are referenced by the prompt."""
 
     @tool
     def list_categories() -> list[dict[str, object]]:
@@ -127,4 +171,21 @@ def build_tools(search: ProductSearchService) -> list[BaseTool]:
             "items": [_item_summary(item) for item in result.items],
         }
 
-    return [list_categories, search_products]
+    @tool
+    def quote_payment(
+        product_id: Annotated[int, "Product id from search_products"],
+        installments: Annotated[
+            int | None,
+            "Number of credit card installments, only if the customer asked for one",
+        ] = None,
+    ) -> dict[str, object]:
+        """How a product can be paid: PIX (with its discount), debit card, bank slip and the
+        credit card installments that are allowed. Use it for any question about payment
+        methods, installments or the PIX discount of a specific product. With `installments`,
+        also says whether that number of installments is allowed and the value of each one."""
+        try:
+            return _quote_summary(payment.quote(product_id, installments))
+        except DomainError as error:
+            return {"error": error.code.value, "message": str(error)}
+
+    return [list_categories, search_products, quote_payment]

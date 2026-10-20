@@ -6,6 +6,7 @@ import pytest
 from langchain_core.tools import BaseTool
 
 from emporio.agent.tools import build_tools, format_brl, format_percent
+from emporio.services.payment import PaymentService
 from emporio.services.search import ProductSearchService
 from tests.factories import make_category, make_product, make_promotion
 
@@ -21,21 +22,20 @@ def tools() -> dict[str, BaseTool]:
         make_product(3, "300.00", name="Sold out", category_id=1, stock=0),
         make_product(4, "200.00", name="Cheap", category_id=1, specs={"color": "Black"}),
     ]
+    promotions = [make_promotion("10", 1)]
     search = ProductSearchService(
-        products,
-        [make_category(1, "Violões"), make_category(2, "Sopros")],
-        [make_promotion("10", 1)],
+        products, [make_category(1, "Violões"), make_category(2, "Sopros")], promotions
     )
-    return {tool.name: tool for tool in build_tools(search)}
+    return {tool.name: tool for tool in build_tools(search, PaymentService(products, promotions))}
 
 
 def names(result: dict[str, Any]) -> list[str]:
     return [item["name"] for item in result["items"]]
 
 
-def test_the_agent_gets_both_catalog_tools(tools: dict[str, BaseTool]):
+def test_the_agent_gets_the_catalog_and_payment_tools(tools: dict[str, BaseTool]):
     # The prompt refers to these names.
-    assert set(tools) == {"search_products", "list_categories"}
+    assert set(tools) == {"search_products", "list_categories", "quote_payment"}
 
 
 def test_search_products_returns_prices_and_promotion(tools: dict[str, BaseTool]):
@@ -136,3 +136,39 @@ def test_money_is_formatted_in_brazilian_style(amount: str, expected: str):
 )
 def test_percent_is_formatted_without_scientific_notation(percent: str, expected: str):
     assert format_percent(Decimal(percent)) == expected
+
+
+def test_quote_payment_returns_pix_and_the_allowed_installments(tools: dict[str, BaseTool]):
+    result = tools["quote_payment"].invoke({"product_id": 4})  # Cheap, R$ 200,00
+
+    assert result["product"] == "Cheap"
+    assert result["final_price"] == "R$ 200,00"
+    assert result["pix"] == {"total": "R$ 190,00", "discount": "R$ 10,00", "discount_applied": True}
+    # 200 / 4 = 50 is under the R$ 80,00 minimum of 4x to 6x, so only up to 3x is offered.
+    assert [o["installments"] for o in result["credit_card_allowed"]] == [1, 2, 3]
+    assert result["max_installments"] == 3
+    assert result["can_combine_methods"] is False
+    assert "requested_installments" not in result
+
+
+def test_quote_payment_pix_has_no_discount_on_a_promotional_price(tools: dict[str, BaseTool]):
+    result = tools["quote_payment"].invoke({"product_id": 1})  # Yamaha C40, 10% off
+
+    assert result["has_active_promotion"] is True
+    assert result["pix"] == {"total": "R$ 900,00", "discount": "R$ 0,00", "discount_applied": False}
+
+
+def test_quote_payment_explains_a_refused_number_of_installments(tools: dict[str, BaseTool]):
+    result = tools["quote_payment"].invoke({"product_id": 4, "installments": 6})
+
+    requested = result["requested_installments"]
+    assert requested["installment_value"] == "R$ 33,33"
+    assert requested["allowed"] is False
+    assert requested["refusal"] == "below_minimum_installment"
+    assert requested["minimum_installment"] == "R$ 80,00"
+
+
+def test_quote_payment_reports_errors_as_data(tools: dict[str, BaseTool]):
+    assert tools["quote_payment"].invoke({"product_id": 99})["error"] == "PRODUCT_NOT_FOUND"
+    wrong = tools["quote_payment"].invoke({"product_id": 4, "installments": 13})
+    assert wrong["error"] == "INVALID_INSTALLMENTS"
