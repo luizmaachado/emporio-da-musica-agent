@@ -4,11 +4,11 @@ Cinco conversas reais com o agente, copiadas da saída do terminal (`uv run empo
 
 | Arquivo | O que mostra |
 |---|---|
-| [01-catalogo-e-preco.md](01-catalogo-e-preco.md) | Consulta ao catálogo em tempo real: opções até um orçamento e preço de um produto |
-| [02-informacoes-da-loja.md](02-informacoes-da-loja.md) | Endereço e horário respondidos a partir do manual de políticas |
-| [03-devolucao.md](03-devolucao.md) | Aplicação da política de devolução |
-| [04-pagamento.md](04-pagamento.md) | Cotação de pagamento calculada pelo código: parcelas e PIX |
-| [05-categoria-sem-produtos.md](05-categoria-sem-produtos.md) | Categoria sem produtos e uma pergunta de política |
+| [01-catalog-and-price.md](01-catalog-and-price.md) | Consulta ao catálogo em tempo real: opções até um orçamento e preço de um produto |
+| [02-store-information.md](02-store-information.md) | Endereço e horário respondidos a partir do manual de políticas |
+| [03-returns.md](03-returns.md) | Aplicação da política de devolução |
+| [04-payment.md](04-payment.md) | Cotação de pagamento calculada pelo código: parcelas e PIX |
+| [05-category-without-products.md](05-category-without-products.md) | Categoria sem produtos e uma pergunta de política |
 
 Os testes de comportamento fora desses cenários (assuntos fora da loja, tentativas de revelar o prompt) estão em [docs/behavior-tests.md](../docs/behavior-tests.md).
 
