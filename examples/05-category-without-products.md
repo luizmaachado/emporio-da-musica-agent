@@ -1,8 +1,8 @@
-# 05 — Categoria sem produtos e política
+# 05 — Category without products, and a policy question
 
-A loja tem categorias sem nenhum produto (sopro, metais, cordas orquestrais). O segundo turno pergunta pela política de troca de um acessório.
+The store has categories with no products (woodwinds, brass, orchestral strings). The second turn asks about the exchange policy for an accessory.
 
-Conversa nova, com contexto zerado:
+A new conversation, with an empty history. The agent answers in Portuguese, the language of its customers:
 
 ```
 Você: Vocês vendem saxofone?
@@ -23,8 +23,8 @@ Assistente: Aqui no Empório da Música, **boquilhas de instrumentos de sopro n�
 [trace]   ALERT: 'boquilhas de instrumentos de sopro não são elegíveis para troca' was not found in the tool results or the manual
 ```
 
-## Observações
-- O agente não inventou saxofones nem preços, e disse que não há modelos para venda.
-- **Imprecisão:** "temos instrumentos de sopro em madeira, incluindo saxofones, mas no momento não temos modelos disponíveis" soa contraditório, e "outros instrumentos da mesma categoria" não existe, porque a categoria está vazia. O modelo leu a descrição da categoria como se fosse estoque.
-- A resposta sobre a boquilha está correta (o manual diz que boquilhas de instrumentos de sopro não são elegíveis para troca, por higiene). O alerta de fundamentação é um **falso positivo**: a frase em negrito é uma paráfrase do manual, e a conferência exige o texto exato.
-- O agente passou os dois números de telefone como se ambos fossem para dúvidas; o segundo é o WhatsApp de atendimento.
+## Notes
+- The agent did not invent saxophones or prices, and said there are no models for sale.
+- **Imprecision:** "temos instrumentos de sopro em madeira, incluindo saxofones, mas no momento não temos modelos disponíveis" ("we have woodwind instruments, including saxophones, but no models are available right now") sounds contradictory, and "outros instrumentos da mesma categoria" ("other instruments of the same category") do not exist, because the category is empty. The model read the category description as stock.
+- The answer about the mouthpiece is correct (the manual says wind instrument mouthpieces are not eligible for exchange, for hygiene). The grounding alert is a **false positive**: the bold phrase is a paraphrase of the manual, and the check requires the exact text.
+- The agent gave both phone numbers as if both were for questions; the second one is the customer service WhatsApp line.

@@ -1,8 +1,8 @@
-# 04 — Pagamento
+# 04 — Payment
 
-As regras de pagamento (PIX com 5% de desconto que não vale em preço promocional, parcelas por faixa, nada é parcelado abaixo de R$ 50,00) estão no código. A tool `quote_payment` devolve a cotação pronta e o modelo apenas repete os valores, sem fazer conta. No segundo turno a resposta sai do contexto da conversa, sem nova chamada.
+The payment rules (5% PIX discount that does not apply to promotional prices, installments by tier, nothing split under R$ 50.00) live in code. The `quote_payment` tool returns the finished quote and the model only repeats the values, without doing any arithmetic. In the second turn the answer comes from the conversation context, with no new call.
 
-Conversa nova, com contexto zerado:
+A new conversation, with an empty history. The agent answers in Portuguese, the language of its customers:
 
 ```
 Você: Posso parcelar o Takamine GD20 em 10x?
@@ -26,7 +26,7 @@ Quer saber se pode combinar PIX com outra forma de pagamento? 🎸
 [trace]   grounding: no ungrounded prices or names found
 ```
 
-## Observações
-- Conferência: 10x de R$ 219,90 (2.199,00 ÷ 10) respeita o mínimo de R$ 100,00 para 7x a 12x. PIX = 5% de R$ 2.199,00 = R$ 109,95, total R$ 2.089,05.
-- Este é o caso que motivou a tool: antes dela, o agente não consultava o preço do Takamine para responder o parcelamento e pedia o valor ao cliente.
-- O agente encadeou duas tools (`search_products` para achar o id e `quote_payment` com `installments=10`).
+## Notes
+- Check: 10 installments of R$ 219.90 (2,199.00 ÷ 10) respect the R$ 100.00 minimum for 7x to 12x. PIX = 5% of R$ 2,199.00 = R$ 109.95, total R$ 2,089.05.
+- This is the case that motivated the tool: before it, the agent did not look up the Takamine price to answer the installment question and asked the customer for the amount.
+- The agent chained two tools (`search_products` to find the id and `quote_payment` with `installments=10`).

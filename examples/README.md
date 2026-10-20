@@ -1,17 +1,17 @@
-# Exemplos de conversa
+# Example conversations
 
-Cinco conversas reais com o agente, copiadas da saída do terminal (`uv run emporio --trace`), sem edição. **Cada conversa foi uma execução nova do agente, com contexto zerado**: nenhuma lembra da anterior. Cada arquivo diz o que mostra, quais tools foram chamadas e os erros que o modelo cometeu.
+Five real conversations with the agent, copied from the terminal output (`uv run emporio --trace`), without editing. **Each conversation was a new run of the agent with an empty history**: none of them remembers the others. The agent talks to its customers in Portuguese, so the conversations are in Portuguese; the notes under each one are in English. Each file says what it shows, which tools were called and the mistakes the model made.
 
-| Arquivo | O que mostra |
+| File | What it shows |
 |---|---|
-| [01-catalog-and-price.md](01-catalog-and-price.md) | Consulta ao catálogo em tempo real: opções até um orçamento e preço de um produto |
-| [02-store-information.md](02-store-information.md) | Endereço e horário respondidos a partir do manual de políticas |
-| [03-returns.md](03-returns.md) | Aplicação da política de devolução |
-| [04-payment.md](04-payment.md) | Cotação de pagamento calculada pelo código: parcelas e PIX |
-| [05-category-without-products.md](05-category-without-products.md) | Categoria sem produtos e uma pergunta de política |
+| [01-catalog-and-price.md](01-catalog-and-price.md) | Querying the catalog in real time: options within a budget, and the price of one product |
+| [02-store-information.md](02-store-information.md) | Address and opening hours answered from the store manual |
+| [03-returns.md](03-returns.md) | Applying the returns policy |
+| [04-payment.md](04-payment.md) | A payment quote computed by code: installments and PIX |
+| [05-category-without-products.md](05-category-without-products.md) | A category without products, and a policy question |
 
-Os testes de comportamento fora desses cenários (assuntos fora da loja, tentativas de revelar o prompt) estão em [docs/behavior-tests.md](../docs/behavior-tests.md).
+Behavior tests outside these scenarios (subjects outside the store, attempts to reveal the prompt) are in [docs/behavior-tests.md](../docs/behavior-tests.md).
 
-**Como ler o trace:** `[trace] 46.9s, 1 tool call(s)` é o tempo da resposta e o número de tools chamadas; as linhas seguintes mostram cada chamada com os argumentos e o resumo do retorno. A última linha é a conferência de fundamentação (`--trace`): ela avisa quando a resposta cita preços ou nomes em negrito que nenhuma tool nem o manual trouxe. É uma ajuda de teste e pode errar nos dois sentidos (veja o exemplo 5).
+**How to read the trace:** `[trace] 46.9s, 1 tool call(s)` is the response time and the number of tools called; the following lines show each call with its arguments and a summary of what it returned. The last line is the grounding check (`--trace`): it warns when the answer cites prices or bold names that neither a tool nor the manual returned. It is a testing aid and can be wrong in both directions (see example 5).
 
-**Configuração:** modelo de chat `qwen3:8b` e embeddings `bge-m3`, ambos locais via Ollama, em um notebook com 16 GB de memória. O tempo por resposta (de 15 a 113 s) reflete isso.
+**Setup:** chat model `qwen3:8b` and embeddings `bge-m3`, both local through Ollama, on a laptop with 16 GB of memory. The time per answer (15 to 113 s) reflects that.

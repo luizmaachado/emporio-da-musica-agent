@@ -1,8 +1,8 @@
-# 01 — Catálogo e preço
+# 01 — Catalog and price
 
-Consulta ao catálogo em tempo real. No primeiro turno o agente descobre a categoria e busca com o filtro de preço; no segundo busca um modelo pelo nome.
+Querying the catalog in real time. In the first turn the agent finds the category and searches with the price filter; in the second it looks up a model by name.
 
-Conversa nova, com contexto zerado:
+A new conversation, with an empty history. The agent answers in Portuguese, the language of its customers:
 
 ```
 Você: Quais opções de violões disponíveis custando até R$1000?
@@ -61,8 +61,8 @@ Assistente: O **Takamine GD20 Dreadnought Natural** custa **R$ 2.199,00**. É um
 [trace]   grounding: no ungrounded prices or names found
 ```
 
-## Observações
-- Os 12 produtos, os preços e a ordem (do mais barato ao mais caro) conferem com o CSV; só entram produtos ativos e com estoque. Todas as frases descritivas de cada violão vêm da descrição do produto no CSV (por exemplo, "Um dos modelos mais vendidos do mundo" é da descrição da Yamaha F310).
-- A tool `list_categories` recebeu um argumento `query` que ela ignora: o modelo de 8B preenche campos que não existem. O resultado não é afetado.
-- A busca do Takamine usou `include_unavailable=True` por conta própria; o produto está disponível, então o resultado é o mesmo.
-- O tempo do primeiro turno (113 s) inclui duas chamadas de tool e uma resposta longa de 12 itens.
+## Notes
+- The 12 products, the prices and the order (cheapest first) match the CSV; only active products with stock are listed. Every descriptive phrase about each guitar comes from the product description in the CSV (for example, "Um dos modelos mais vendidos do mundo" is in the description of the Yamaha F310).
+- `list_categories` received a `query` argument that it ignores: the 8B model fills in fields that do not exist. The result is not affected.
+- The Takamine search used `include_unavailable=True` on its own initiative; the product is available, so the result is the same.
+- The first turn took 113 s: two tool calls and a long answer with 12 items.

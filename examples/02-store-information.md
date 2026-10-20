@@ -1,8 +1,8 @@
-# 02 — Informações da loja
+# 02 — Store information
 
-Endereço e horário vêm do manual de políticas (PDF). A cada mensagem, as três seções do manual mais próximas em significado são anexadas ao prompt (busca semântica com `bge-m3`), e o agente responde só com base nelas. Nenhuma tool é chamada.
+Address and opening hours come from the store manual (PDF). On every message, the three manual sections closest in meaning are added to the prompt (semantic search with `bge-m3`), and the agent answers only from them. No tool is called.
 
-Conversa nova, com contexto zerado:
+A new conversation, with an empty history. The agent answers in Portuguese, the language of its customers:
 
 ```
 Você: Qual o endereço da loja?
@@ -20,7 +20,7 @@ Assistente: Sim, estamos abertos no sábado, das 09h às 13h. É um dia legal pa
 [trace]   grounding: no ungrounded prices or names found
 ```
 
-## Observações
-- Endereço, CEP e o horário de sábado (09h às 13h) conferem com o manual.
-- **Erro do modelo:** "há mais de 13 anos" está errado. O manual diz "mais de 15 anos" e a loja foi fundada em 2008. É um erro de cálculo do 8B; a conferência de fundamentação só confere preços e nomes em negrito, então não o pega.
-- O agente informa os dias e o horário, mas não diz se a loja está aberta neste momento: ele não tem relógio.
+## Notes
+- The address, the postal code and the Saturday hours (9:00 to 13:00) match the manual.
+- **Model error:** "há mais de 13 anos" ("for over 13 years") is wrong. The manual says "over 15 years" and the store was founded in 2008. It is an arithmetic mistake of the 8B model; the grounding check only verifies prices and bold names, so it does not catch it.
+- The agent gives the opening days and hours but does not say whether the store is open right now: it has no clock.

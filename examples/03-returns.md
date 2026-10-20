@@ -1,8 +1,8 @@
-# 03 — Política de devolução
+# 03 — Returns policy
 
-Aplica a regra de arrependimento do manual (seção 4.1).
+Applies the regret rule of the manual (section 4.1).
 
-Conversa nova, com contexto zerado:
+A new conversation, with an empty history. The agent answers in Portuguese, the language of its customers:
 
 ```
 Você: Me arrependi da minha compra, posso devolver meu pedido?
@@ -13,7 +13,7 @@ Assistente: Claro! Se você se arrependeu da compra, pode solicitar a devoluçã
 [trace]   grounding: no ungrounded prices or names found
 ```
 
-## Observações
-- Prazo (7 dias corridos após o recebimento), condições, reembolso (até 10 dias úteis) e frete por conta da loja conferem com o manual.
-
-- **Limitação:** o agente responde a regra geral e não consulta o pedido do cliente, então não sabe se o prazo dele ainda vale. A consulta de pedidos e a checagem de elegibilidade ficaram fora do escopo desta entrega.
+## Notes
+- The deadline (7 calendar days after receipt), the conditions, the refund (up to 10 business days) and the return shipping paid by the store match the manual.
+- **Failure:** the prompt tells the agent not to offer help with returns and to send the customer to the store team. This time it ended with "Precisa de ajuda para iniciar o processo?" ("Do you need help starting the process?") and gave no contacts. In another run the same question was routed correctly; the 8B model follows this rule inconsistently.
+- **Limitation:** the agent states the general rule and does not look up the customer's order, so it cannot know whether the customer's deadline still holds. Order lookup and return eligibility are outside the scope of this delivery.
